@@ -3,291 +3,182 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>線上宮廟 - 誠心求籤 (極致體驗版)</title>
+    <title>線上宮廟 - 誠心求籤 (簡潔版)</title>
     <style>
-        /* 基本樣式 */
+        /* 基本風格與 Apple 風格毛玻璃預設 */
         body {
-            font-family: 'PingFang TC', 'Microsoft JhengHei', sans-serif;
-            background-color: #fcefe2; /* 溫暖的紙張色 */
-            background-image: url('https://www.transparenttextures.com/patterns/p6.png'); /* 增加一點質感 */
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            min-height: 100vh;
-            margin: 0;
-            overflow-x: hidden;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+            background-color: #f5f5f7;
+            display: flex; flex-direction: column; align-items: center; justify-content: center;
+            min-height: 100vh; margin: 0; color: #1d1d1f;
         }
 
-        h1 { color: #801a1a; margin-bottom: 5px; }
-        .sub-title { color: #666; margin-bottom: 30px; font-size: 0.9em; }
+        h1 { color: #b32d2e; font-weight: 600; }
+        .sub-title { color: #86868b; font-size: 0.9em; margin-bottom: 40px; }
 
-        /* --- 籤筒樣式 --- */
+        /* --- 籤筒 --- */
         #fortune-pot {
-            width: 110px; height: 170px;
-            background-color: #b32d2e;
-            border: 5px solid #801a1a;
-            border-radius: 10px 10px 40px 40px;
-            position: relative;
-            cursor: pointer;
-            display: flex; justify-content: center; align-items: flex-start;
-            box-shadow: 0 10px 20px rgba(0,0,0,0.2);
-            transition: transform 0.1s ease;
+            width: 100px; height: 160px;
+            background: linear-gradient(145deg, #d32f2f, #b71c1c);
+            border: 3px solid #801a1a; border-radius: 12px 12px 45px 45px;
+            cursor: pointer; display: flex; justify-content: center; align-items: flex-start;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.15);
+            transition: transform 0.2s cubic-bezier(0.4, 0, 0.2, 1);
         }
-        #fortune-pot:active { transform: scale(0.95); }
-        .stick-dec { width: 8px; height: 60px; background-color: #f1c40f; margin: 0 2px; border-radius: 4px; }
+        #fortune-pot:active { transform: scale(0.92); }
+        .stick-dec { width: 6px; height: 50px; background: #ffd700; margin: 0 2px; border-radius: 3px; }
 
-        /* 搖晃動畫 */
         @keyframes shake {
-            0% { transform: rotate(0deg); }
-            25% { transform: rotate(12deg); }
-            50% { transform: rotate(-12deg); }
-            75% { transform: rotate(12deg); }
-            100% { transform: rotate(0deg); }
+            0%, 100% { transform: rotate(0deg); }
+            20% { transform: rotate(15deg); }
+            40% { transform: rotate(-15deg); }
+            60% { transform: rotate(10deg); }
+            80% { transform: rotate(-10deg); }
         }
-        .shaking { animation: shake 0.4s infinite ease-in-out; }
+        .shaking { animation: shake 0.5s infinite; }
 
-        /* --- 主要互動按鈕 --- */
-        .action-btn {
-            margin-top: 20px;
-            padding: 12px 30px;
-            background-color: #b32d2e;
-            color: white;
-            border: none;
-            border-radius: 25px;
-            font-size: 1.1em;
-            cursor: pointer;
-            box-shadow: 0 4px 10px rgba(179, 45, 46, 0.3);
-            transition: background 0.2s;
+        /* --- 按鈕 --- */
+        .apple-btn {
+            margin-top: 25px; padding: 12px 28px;
+            background-color: #0071e3; color: white;
+            border: none; border-radius: 20px; font-weight: 500;
+            cursor: pointer; transition: all 0.2s;
         }
-        .action-btn:hover { background-color: #801a1a; }
-        .action-btn:disabled { background-color: #ccc; cursor: not-allowed; }
+        .apple-btn:disabled { background-color: #d2d2d7; color: #86868b; }
 
-        /* --- 毛玻璃擲筊彈窗 (Glassmorphism Pop-up) --- */
+        /* --- 毛玻璃彈窗 (Glassmorphism) --- */
         #glass-overlay {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-            background-color: rgba(0, 0, 0, 0.4);
-            display: none; /* 預設隱藏 */
-            justify-content: center; align-items: center;
-            z-index: 1000;
-            backdrop-filter: blur(1px); /* 底層輕微模糊 */
-            opacity: 0; transition: opacity 0.3s ease;
+            background: rgba(0,0,0,0.2);
+            display: none; justify-content: center; align-items: center;
+            backdrop-filter: blur(0px); transition: backdrop-filter 0.4s ease;
+            z-index: 9999;
         }
-        #glass-overlay.show { display: flex; opacity: 1; backdrop-filter: blur(8px); }
+        #glass-overlay.active { display: flex; backdrop-filter: blur(12px); }
 
         #glass-card {
-            background: rgba(255, 255, 255, 0.4); /* 半透明白色背景 */
-            border-radius: 20px;
-            padding: 40px;
-            width: 80%; max-width: 320px;
-            text-align: center;
-            border: 1px solid rgba(255, 255, 255, 0.3); /* 亮邊框 */
-            box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.2); /* 深陰影 */
-            backdrop-filter: blur(10px); /* 卡片內部模糊 (核心) */
-            -webkit-backdrop-filter: blur(10px);
-            transform: scale(0.8); transition: transform 0.3s ease;
+            background: rgba(255, 255, 255, 0.6);
+            border: 1px solid rgba(255, 255, 255, 0.4);
+            border-radius: 28px; padding: 40px; width: 280px; text-align: center;
+            box-shadow: 0 10px 40px rgba(0,0,0,0.1);
+            transform: scale(0.8); transition: transform 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275);
         }
-        #glass-overlay.show #glass-card { transform: scale(1); }
+        #glass-overlay.active #glass-card { transform: scale(1); }
 
-        /* 筊杯圖案與結果 */
-        #cup-icon { font-size: 60px; margin-bottom: 15px; display: block; }
-        #cup-result-text { font-size: 2em; font-weight: bold; margin-bottom: 10px; color: #333; }
-        #success-count-text { font-size: 1em; color: #555; background: rgba(255,255,255,0.5); padding: 5px 10px; border-radius: 15px; }
+        #cup-icon { font-size: 70px; display: block; margin-bottom: 10px; }
+        #cup-text { font-size: 1.5em; font-weight: 600; }
 
-        /* --- 籤詩結果區塊 (保持精緻) --- */
+        /* --- 籤詩結果 --- */
         #result-box {
-            margin-top: 30px; text-align: center; padding: 30px;
-            background: rgba(255,255,255,0.9);
-            border: 2px solid #801a1a; border-radius: 15px;
-            width: 90%; max-width: 400px;
-            display: none;
-            box-shadow: 0 10px 30px rgba(0,0,0,0.15);
-            animation: fadeIn 0.5s ease;
+            display: none; margin-top: 30px; padding: 30px;
+            background: #fff; border-radius: 20px; width: 85%; max-width: 350px;
+            box-shadow: 0 8px 24px rgba(0,0,0,0.08); text-align: center;
+            animation: slideUp 0.6s ease;
         }
-        h2#stick-name { color: #b32d2e; margin: 0 0 10px 0; font-size: 1.8em; }
-        .luck-tag { font-weight: bold; font-size: 1.3em; color: #d35400; margin-bottom: 15px; display: block; }
-        .poem { font-style: italic; color: #444; line-height: 1.8; font-size: 1.1em; white-space: pre-line; border-top: 1px solid #eee; padding-top: 15px; }
-
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(20px); } to { opacity: 1; transform: translateY(0); } }
-
+        @keyframes slideUp { from { opacity: 0; transform: translateY(30px); } to { opacity: 1; transform: translateY(0); } }
+        .poem-content { line-height: 2; color: #424245; white-space: pre-line; margin-top: 15px; font-size: 1.1em; }
     </style>
 </head>
 <body>
 
-    <h1>🏮 線上虔誠求籤 🏮</h1>
-    <p class="sub-title">心中默念所求之事，點擊籤筒</p>
+    <h1>🏮 線上求籤 🏮</h1>
+    <p class="sub-title">點擊籤筒，誠心祈求指引</p>
 
-    <div id="fortune-pot" onclick="startDrawFlow()">
-        <div class="stick-dec"></div>
-        <div class="stick-dec"></div>
-        <div class="stick-dec"></div>
-        <div class="stick-dec"></div>
+    <div id="fortune-pot" onclick="draw()">
+        <div class="stick-dec"></div><div class="stick-dec"></div><div class="stick-dec"></div>
     </div>
 
-    <div id="toss-control" style="display:none; text-align:center;">
-        <p style="margin-top:30px; font-weight:bold; color:#801a1a;">已抽得一支籤，需連續三個聖筊確認。</p>
-        <button id="toss-btn" class="action-btn" onclick="tossCupsFlow()">開始擲筊 Confirm</button>
-    </div>
-
-    <div id="glass-overlay" onclick="closeGlassFlow()">
-        <div id="glass-card" onclick="event.stopPropagation()"> <span id="cup-icon">☯️</span>
-            <div id="cup-result-text">準備擲筊</div>
-            <span id="success-count-text">連續聖筊：0 / 3</span>
-            <p style="font-size: 0.8em; color: #777; margin-top: 15px;">(點擊空白處或等待自動關閉)</p>
-        </div>
+    <div id="toss-area" style="display:none; text-align:center; margin-top:20px;">
+        <p>已得一籤，請擲筊確認神意</p>
+        <button class="apple-btn" onclick="toss()">擲筊 (搏杯)</button>
     </div>
 
     <div id="result-box">
-        <h2 id="stick-name"></h2>
-        <span class="luck-tag" id="stick-luck"></span>
-        <div class="poem" id="stick-poem"></div>
-        <button class="action-btn" style="margin-top:25px; font-size:0.9em; padding: 8px 20px;" onclick="location.reload()">重新求籤</button>
+        <h2 id="r-name" style="margin:0; color:#b32d2e;"></h2>
+        <b id="r-luck" style="color:#d35400;"></b>
+        <div class="poem-content" id="r-poem"></div>
+        <button class="apple-btn" style="background:#f5f5f7; color:#0071e3; margin-top:20px;" onclick="location.reload()">重新求籤</button>
+    </div>
+
+    <div id="glass-overlay" onclick="this.classList.remove('active')">
+        <div id="glass-card" onclick="event.stopPropagation()">
+            <span id="cup-icon">⏳</span>
+            <div id="cup-text">擲筊中...</div>
+        </div>
     </div>
 
     <script>
-        // 1. 籤詩資料庫 (60甲子籤詩簡化版範例)
         const fortuneData = [
             { name: "第一籤", luck: "大吉", poem: "雲開霧散見青天，\n萬事如意皆自然。\n且待東風傳好報，\n佳音頃刻到門前。" },
-            { name: "第九籤", luck: "中吉", poem: "期待陽春春已到，\n且將心事付汪洋。\n與君相約梅花下，\n把酒言歡意氣揚。" },
-            { name: "第十五籤", luck: "平吉", poem: "走馬看花花不久，\n凡事求穩不求快。\n莫聽小人言語誘，\n守得雲開見月明。" },
-            { name: "第二四籤", luck: "中平", poem: "一紙官書火急催，\n扁舟駕浪到江隈。\n自從妄意生貪求，\n直到如今後悔遲。" },
-            { name: "第五八籤", luck: "下下", poem: "風雨交加路難行，\n心中焦躁事難成。\n閉門深思三兩日，\n退後一步自然清。" }
+            { name: "第十二籤", luck: "中吉", poem: "長江風浪漸漸靜，\n于今得進可安寧。\n必有貴人相扶助，\n兇事脫出見太平。" },
+            { name: "第三十籤", luck: "平吉", poem: "漸漸濃雲散，\n看看月再明。\n雖然遭遇處，\n且且待時亨。" }
         ];
 
-        let currentStick = null; 
-        let successCount = 0;    
-        let isTossing = false; // 防止重複點擊
+        let selectedStick = null;
 
-        const pot = document.getElementById('fortune-pot');
-        const tossControl = document.getElementById('toss-control');
-        const tossBtn = document.getElementById('toss-btn');
-        const glassOverlay = document.getElementById('glass-overlay');
-        const resBox = document.getElementById('result-box');
-
-        // --- 功能函數 ---
-
-        // 簡單震動封裝 (相容性檢查)
-        function vibrate(ms) {
-            if (navigator.vibrate) {
-                navigator.vibrate(ms);
-            }
+        function vibrate(pattern) {
+            if (navigator.vibrate) navigator.vibrate(pattern);
         }
 
-        // --- 流程控制 ---
-
-        // 第一步：抽籤
-        function startDrawFlow() {
-            // 重置狀態
-            resBox.style.display = 'none';
-            tossControl.style.display = 'none';
-            successCount = 0;
-
-            // 1. 震動回饋 (長震動，代表搖晃)
-            vibrate(500); 
-
-            // 2. 搖晃動畫
+        // 抽籤
+        function draw() {
+            vibrate(300);
+            const pot = document.getElementById('fortune-pot');
             pot.classList.add('shaking');
             
             setTimeout(() => {
                 pot.classList.remove('shaking');
-                // 3. 隨機選籤
-                currentStick = fortuneData[Math.floor(Math.random() * fortuneData.length)];
-                
-                // 4. 顯示擲筊控制區
-                tossControl.style.display = 'block';
-                tossControl.scrollIntoView({ behavior: 'smooth' });
-            }, 1500);
+                selectedStick = fortuneData[Math.floor(Math.random() * fortuneData.length)];
+                document.getElementById('toss-area').style.display = 'block';
+                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
+            }, 1200);
         }
 
-        // 第二步：擲筊流程 (觸發彈窗)
-        function tossCupsFlow() {
-            if (isTossing) return;
-            isTossing = true;
-            tossBtn.disabled = true;
+        // 擲筊
+        function toss() {
+            const overlay = document.getElementById('glass-overlay');
+            const icon = document.getElementById('cup-icon');
+            const text = document.getElementById('cup-text');
 
-            // 1. 震動回饋 (短促雙震動，模擬筊杯落地)
-            vibrate([50, 30, 50]); 
+            overlay.classList.add('active');
+            icon.innerText = "⏳";
+            text.innerText = "擲筊中...";
+            vibrate([50, 30, 50]);
 
-            // 2. 顯示毛玻璃彈窗 (初始狀態)
-            updateGlassDisplay("⏳", "擲筊中...", successCount);
-            glassOverlay.classList.add('show');
-
-            // 3. 模擬擲筊時間 (1秒後開獎)
             setTimeout(() => {
-                const outcomes = ["聖筊", "笑筊", "陰筊"];
                 const rand = Math.random();
-                let result = "";
-                let icon = "";
-                let color = "";
-
-                // 機率計算 (50%, 25%, 25%)
-                if (rand < 0.5) {
-                    result = "聖筊";
-                    icon = "🙏"; // 或使用筊杯圖片
-                    color = "#27ae60"; // 綠色
-                    successCount++;
-                    vibrate(100); // 聖筊短震
-                } else if (rand < 0.75) {
-                    result = "笑筊";
-                    icon = "😄";
-                    color = "#f39c12"; // 橘色
-                    successCount = 0; 
-                } else {
-                    result = "陰筊";
-                    icon = "😡";
-                    color = "#c0392b"; // 紅色
-                    successCount = 0; 
-                }
-
-                // 4. 更新彈窗結果
-                updateGlassDisplay(icon, result, successCount, color);
-
-                isTossing = false;
-                tossBtn.disabled = false;
-
-                // 5. 判斷是否達成
-                if (successCount === 3) {
-                    vibrate([200, 100, 200]); // 成功確認長震動
-                    document.getElementById('cup-result-text').innerText = "連續三聖筊！";
+                if (rand < 0.5) { // 50% 聖筊
+                    icon.innerText = "🙏";
+                    text.innerText = "聖筊：神明應允";
+                    text.style.color = "#28a745";
+                    vibrate(200);
+                    
                     setTimeout(() => {
-                        closeGlassFlow();
-                        showFinalResult();
-                    }, 1500); // 聖筊結果停留久一點
+                        overlay.classList.remove('active');
+                        showResult();
+                    }, 1500);
                 } else {
-                    // 非聖筊，2秒後自動關閉彈窗，讓使用者重擲
-                    if (result !== "聖筊") {
-                        setTimeout(closeGlassFlow, 2000);
-                    } else {
-                        // 是聖筊但未滿三次，不自動關閉，讓使用者有心理準備手動點擊或等待
-                    }
+                    const isLaugh = Math.random() > 0.5;
+                    icon.innerText = isLaugh ? "😄" : "😡";
+                    text.innerText = isLaugh ? "笑筊：再求一次" : "陰筊：神明不允";
+                    text.style.color = "#d32f2f";
+                    
+                    // 不允的話，點擊背景可關閉重試
+                    setTimeout(() => {
+                        overlay.classList.remove('active');
+                    }, 2000);
                 }
             }, 1000);
         }
 
-        // 更新毛玻璃卡片內容
-        function updateGlassDisplay(icon, text, count, color = "#333") {
-            document.getElementById('cup-icon').innerText = icon;
-            const textEl = document.getElementById('cup-result-text');
-            textEl.innerText = text;
-            textEl.style.color = color;
-            document.getElementById('success-count-text').innerText = `連續聖筊：${count} / 3`;
-        }
-
-        // 關閉毛玻璃彈窗
-        function closeGlassFlow() {
-            glassOverlay.classList.remove('show');
-        }
-
-        // 第三步：顯示最終結果
-        function showFinalResult() {
-            tossControl.style.display = 'none';
-            
-            document.getElementById('stick-name').innerText = currentStick.name;
-            document.getElementById('stick-luck').innerText = `【${currentStick.luck}】`;
-            document.getElementById('stick-poem').innerText = currentStick.poem;
-            
-            resBox.style.display = 'block';
-            resBox.scrollIntoView({ behavior: 'smooth' });
+        function showResult() {
+            document.getElementById('toss-area').style.display = 'none';
+            const box = document.getElementById('result-box');
+            document.getElementById('r-name').innerText = selectedStick.name;
+            document.getElementById('r-luck').innerText = `【${selectedStick.luck}】`;
+            document.getElementById('r-poem').innerText = selectedStick.poem;
+            box.style.display = 'block';
+            window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
         }
     </script>
 </body>
