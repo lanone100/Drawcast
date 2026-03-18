@@ -234,6 +234,28 @@
             letter-spacing: 0.2em; font-weight: 500;
             text-align: center; transition: color 0.3s;
         }
+        /* 搖晃提示 */
+        .shake-hint {
+            display: inline-flex; align-items: center; gap: 5px;
+            font-size: 0.72em; color: var(--text-tertiary);
+            letter-spacing: 0.06em; font-weight: 400;
+            margin-top: 2px;
+            opacity: 0; transform: translateY(4px);
+            transition: opacity 0.5s ease, transform 0.5s ease;
+        }
+        .shake-hint.visible { opacity: 1; transform: translateY(0); }
+        .shake-icon { display: inline-block; animation: phoneRock 1.8s ease-in-out infinite; }
+        @keyframes phoneRock {
+            0%,100% { transform: rotate(0deg); }
+            20%     { transform: rotate(18deg); }
+            40%     { transform: rotate(-15deg); }
+            60%     { transform: rotate(12deg); }
+            80%     { transform: rotate(-10deg); }
+        }
+        .pot-stage.motion-active .pot-glow {
+            background: radial-gradient(ellipse, rgba(192,57,43,0.65) 0%, transparent 70%);
+            width: 150px; height: 45px;
+        }
 
         /* 底部光暈 */
         .pot-glow {
@@ -779,6 +801,9 @@
                 </svg>
             </div>
             <span class="pot-label" id="potLabel">點擊搖動籤筒</span>
+            <span class="shake-hint" id="shakeHint">
+                <span class="shake-icon">📱</span>搖晃手機也可抽籤
+            </span>
         </div>
     </section>
 
@@ -1088,6 +1113,75 @@
 
         setTimeout(() => window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' }), 200);
     }
+
+    /* ── 搖晃手機抽籤 (DeviceMotion) ── */
+    (function setupShake() {
+        const THRESHOLD = 18;   // 搖晃靈敏度 (m/s²)
+        const COOLDOWN  = 1800; // 兩次觸發最短間隔 ms
+        let lastShake = 0;
+        let lastX = 0, lastY = 0, lastZ = 0;
+        let motionSupported = false;
+
+        function onMotion(e) {
+            const acc = e.accelerationIncludingGravity;
+            if (!acc) return;
+            const { x, y, z } = acc;
+            const delta = Math.abs(x - lastX) + Math.abs(y - lastY) + Math.abs(z - lastZ);
+            lastX = x; lastY = y; lastZ = z;
+
+            if (delta > THRESHOLD) {
+                const now = Date.now();
+                if (now - lastShake < COOLDOWN) return;
+                lastShake = now;
+
+                // 只有在第一步（可以抽籤）時才響應
+                const potStage = document.getElementById('potStage');
+                if (!potStage || potStage.classList.contains('shaking')) return;
+                if (document.getElementById('toss-area').style.display === 'block') return;
+                if (document.getElementById('result-box').classList.contains('visible')) return;
+
+                // 短震動回饋
+                if (navigator.vibrate) navigator.vibrate([30, 20, 30]);
+
+                // 視覺回饋：光暈增強
+                potStage.classList.add('motion-active');
+                setTimeout(() => potStage.classList.remove('motion-active'), 600);
+
+                startDraw();
+            }
+        }
+
+        function startListening() {
+            window.addEventListener('devicemotion', onMotion);
+            motionSupported = true;
+            // 顯示提示文字
+            setTimeout(() => {
+                const hint = document.getElementById('shakeHint');
+                if (hint) hint.classList.add('visible');
+            }, 800);
+        }
+
+        // iOS 13+ 需要使用者授權
+        if (typeof DeviceMotionEvent !== 'undefined' &&
+            typeof DeviceMotionEvent.requestPermission === 'function') {
+            // 在使用者第一次點擊籤筒時請求權限
+            const potStage = document.getElementById('potStage');
+            let permAsked = false;
+            const askPermission = function() {
+                if (permAsked) return;
+                permAsked = true;
+                DeviceMotionEvent.requestPermission()
+                    .then(state => {
+                        if (state === 'granted') startListening();
+                    })
+                    .catch(() => {});
+            };
+            if (potStage) potStage.addEventListener('touchstart', askPermission, { once: true });
+        } else if (typeof DeviceMotionEvent !== 'undefined') {
+            // Android / 舊版 iOS — 直接監聽
+            startListening();
+        }
+    })();
 </script>
 </body>
 </html>
