@@ -1,0 +1,93 @@
+<div id="divination-box" style="display:none; margin-top: 20px; text-align: center; padding: 15px; background: #fff5f5; border: 2px dashed #b32d2e; border-radius: 10px;">
+    <h3>已抽得：<span id="pending-stick"></span></h3>
+    <p>請擲筊確認（需連續三個聖筊）</p>
+    <div id="cup-display" style="font-size: 30px; margin: 10px 0;">☯️</div>
+    <div id="count-display">目前連續聖筊：0</div>
+    <button onclick="tossCups()" style="margin-top:10px; padding: 8px 20px; cursor:pointer;">開始擲筊</button>
+</div>
+
+<div id="result-box"> ... </div>
+
+<script>
+    const fortuneData = [
+        { name: "第一籤", luck: "大吉", poem: "雲開霧散見青天，<br>萬事如意皆自然。" },
+        { name: "第十五籤", luck: "平吉", poem: "走馬看花花不久，<br>凡事求穩不求快。" },
+        { name: "第八籤", luck: "中吉", poem: "勤耕苦讀幾多年，<br>今日功名在目前。" }
+    ];
+
+    let currentStick = null; // 暫存抽到的籤
+    let successCount = 0;    // 連續聖筊計數
+
+    // 第一步：抽籤
+    function drawStick() {
+        const pot = document.getElementById('fortune-pot');
+        pot.classList.add('shaking');
+        document.getElementById('result-box').style.display = 'none';
+        
+        setTimeout(() => {
+            pot.classList.remove('shaking');
+            // 隨機選出一支籤，但先不顯示內容
+            currentStick = fortuneData[Math.floor(Math.random() * fortuneData.length)];
+            
+            // 切換到擲筊介面
+            document.getElementById('pending-stick').innerText = currentStick.name;
+            document.getElementById('divination-box').style.display = 'block';
+            successCount = 0;
+            updateDisplay("☯️", 0);
+        }, 1200);
+    }
+
+    // 第二步：擲筊邏輯
+    function tossCups() {
+        const outcomes = ["聖筊", "笑筊", "陰筊"];
+        // 聖筊機率約 50% (一平一凸)，笑筊 25% (兩平)，陰筊 25% (兩凸)
+        const rand = Math.random();
+        let result = "";
+
+        if (rand < 0.5) {
+            result = "聖筊";
+            successCount++;
+        } else if (rand < 0.75) {
+            result = "笑筊";
+            successCount = 0; // 斷了，重來
+        } else {
+            result = "陰筊";
+            successCount = 0; // 斷了，重來
+        }
+
+        updateDisplay(result, successCount);
+
+        // 判斷是否達成連續三次
+        if (successCount === 3) {
+            setTimeout(() => {
+                alert("恭喜！神明應允，請看籤詩。");
+                showFinalResult();
+            }, 500);
+        } else if (result !== "聖筊") {
+            // 視需求可以決定是否要讓使用者重抽籤，或是原地繼續擲
+            // 這裡設定為原地重來
+        }
+    }
+
+    function updateDisplay(res, count) {
+        document.getElementById('cup-display').innerText = res;
+        document.getElementById('count-display').innerText = `目前連續聖筊：${count}`;
+        
+        // 改變顏色提醒
+        const cupDiv = document.getElementById('cup-display');
+        if(res === "聖筊") cupDiv.style.color = "green";
+        else cupDiv.style.color = "red";
+    }
+
+    // 第三步：顯示結果
+    function showFinalResult() {
+        document.getElementById('divination-box').style.display = 'none';
+        const resBox = document.getElementById('result-box');
+        
+        document.getElementById('stick-name').innerText = currentStick.name;
+        document.getElementById('stick-luck').innerText = `【${currentStick.luck}】`;
+        document.getElementById('stick-poem').innerHTML = currentStick.poem;
+        
+        resBox.style.display = 'block';
+    }
+</script>
