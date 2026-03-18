@@ -3,18 +3,21 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>線上宮廟 - 智慧解籤版</title>
+    <title>線上宮廟 - 智慧解籤慶祝版</title>
+    
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    
     <style>
         /* --- 全局樣式 --- */
         body {
             font-family: -apple-system, "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
-            background-color: #f2f2f7; /* iOS 系統背景色 */
+            background-color: #f2f2f7; 
             display: flex; flex-direction: column; align-items: center;
             min-height: 100vh; margin: 0; padding: 20px; color: #1c1c1e;
         }
 
-        h1 { color: #b32d2e; font-weight: 700; letter-spacing: -0.5px; }
-        .sub-title { color: #8e8e93; font-size: 0.9em; margin-bottom: 30px; }
+        h1 { color: #b32d2e; font-weight: 700; letter-spacing: -0.5px; margin-bottom: 5px; }
+        .sub-title { color: #8e8e93; font-size: 0.9em; margin-bottom: 40px; }
 
         /* --- 籤筒與動畫 --- */
         #fortune-pot {
@@ -58,46 +61,55 @@
         }
         #glass-overlay.active #glass-card { transform: translateY(0); }
 
-        /* --- 籤詩結果與解籤 --- */
+        /* --- 籤詩結果與解籤 (置中樣式) --- */
         #result-box {
-            display: none; width: 100%; max-width: 400px; background: white;
-            border-radius: 20px; padding: 25px; box-shadow: 0 4px 20px rgba(0,0,0,0.05);
-            margin-top: 20px; animation: slideUp 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+            display: none; width: 100%; max-width: 380px; background: white;
+            border-radius: 24px; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.08);
+            margin-top: 25px; animation: slideUp 0.6s cubic-bezier(0.23, 1, 0.32, 1);
+            text-align: center;
         }
         @keyframes slideUp { from { opacity: 0; transform: translateY(40px); } to { opacity: 1; transform: translateY(0); } }
 
-        .luck-tag { display: inline-block; padding: 4px 12px; border-radius: 8px; background: #fff2f2; color: #b32d2e; font-weight: 600; margin-bottom: 10px; }
-        .poem-main { font-size: 1.25em; line-height: 1.8; color: #1c1c1e; margin: 20px 0; font-weight: 500; white-space: pre-line; }
+        .luck-tag { display: inline-block; padding: 6px 16px; border-radius: 20px; background: #fff2f2; color: #b32d2e; font-weight: 700; font-size: 0.9em; margin-bottom: 15px; }
+        h2#r-name { font-size: 1.5em; margin: 0; letter-spacing: 2px; }
+        
+        .poem-main { 
+            font-size: 1.3em; line-height: 2.2; color: #1c1c1e; 
+            margin: 25px 0; font-weight: 500; white-space: pre-line; 
+            text-align: center; border-top: 1px solid #f2f2f7; border-bottom: 1px solid #f2f2f7;
+            padding: 20px 0;
+        }
 
-        /* 解籤卡片設計 */
         .analysis-grid {
-            display: grid; grid-template-columns: 1fr 1fr; gap: 10px; border-top: 1px solid #f2f2f7; padding-top: 20px;
+            display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 20px;
         }
         .analysis-item {
-            background: #f9f9fb; padding: 12px; border-radius: 12px; text-align: left;
+            background: #f9f9fb; padding: 15px; border-radius: 16px; 
+            text-align: center;
         }
-        .analysis-label { font-size: 0.8em; color: #8e8e93; display: block; margin-bottom: 4px; }
-        .analysis-value { font-size: 0.95em; color: #3a3a3c; font-weight: 600; }
+        .analysis-label { font-size: 0.85em; color: #8e8e93; display: block; margin-bottom: 6px; font-weight: 500; }
+        .analysis-value { font-size: 1em; color: #3a3a3c; font-weight: 600; }
 
     </style>
 </head>
 <body>
 
     <h1>🏮 線上智慧求籤 🏮</h1>
-    <p class="sub-title">誠心所至，金石為開</p>
+    <p class="sub-title">誠心祈求，自得指引</p>
 
     <div id="fortune-pot" onclick="startDraw()">
         <div class="stick-dec"></div><div class="stick-dec"></div><div class="stick-dec"></div>
     </div>
 
-    <div id="toss-area" style="display:none; text-align:center;">
-        <p style="color:#444;">已為您抽得一籤，請擲筊確認</p>
-        <button class="apple-btn" onclick="startToss()">擲筊確認</button>
+    <div id="toss-area" style="display:none; text-align:center; margin-top: 30px;">
+        <p style="color:#444; font-weight: 500;">已為您抽得一籤，請擲筊請示</p>
+        <button class="apple-btn" onclick="startToss()">擲筊 (搏杯)</button>
     </div>
 
     <div id="result-box">
         <div class="luck-tag" id="r-luck"></div>
-        <h2 id="r-name" style="margin:0;"></h2>
+        <h2 id="r-name"></h2>
+        
         <div class="poem-main" id="r-poem"></div>
         
         <div class="analysis-grid">
@@ -107,33 +119,32 @@
             <div class="analysis-item"><span class="analysis-label">健康</span><span class="analysis-value" id="a-health"></span></div>
         </div>
 
-        <button class="apple-btn" style="background:#f2f2f7; color:#007aff; width:100%;" onclick="location.reload()">重新求籤</button>
+        <button class="apple-btn" style="background:#f2f2f7; color:#007aff; width:100%; border-radius: 16px;" onclick="location.reload()">重新求籤</button>
     </div>
 
     <div id="glass-overlay">
         <div id="glass-card">
             <div id="cup-icon" style="font-size: 60px; margin-bottom: 10px;">☯️</div>
-            <div id="cup-text" style="font-size: 1.2em; font-weight: 600;">正在請示神明...</div>
+            <div id="cup-text" style="font-size: 1.25em; font-weight: 600;">正在請示神明...</div>
         </div>
     </div>
 
     <script>
-        // 擴充包含「解籤」內容的資料庫
         const fortuneData = [
             { 
                 name: "第一籤", luck: "大吉", 
-                poem: "雲開霧散見青天，\n萬事如意皆自然。\n且待東風傳好報，\n佳音頃刻到門前。",
+                poem: "雲開霧散見青天\n萬事如意皆自然\n且待東風傳好報\n佳音頃刻到門前",
                 explain: { money: "財源廣進", love: "天作之合", work: "升遷有望", health: "早日康復" }
             },
             { 
                 name: "第十二籤", luck: "中吉", 
-                poem: "長江風浪漸漸靜，\n于今得進可安寧。\n必有貴人相扶助，\n兇事脫出見太平。",
+                poem: "長江風浪漸漸靜\n于今得進可安寧\n必有貴人相扶助\n兇事脫出見太平",
                 explain: { money: "先難後易", love: "細水長流", work: "遇貴人助", health: "漸入佳境" }
             },
             { 
                 name: "第二五籤", luck: "平吉", 
-                poem: "走馬看花花不久，\n凡事求穩不求快。\n莫聽小人言語誘，\n守得雲開見月明。",
-                explain: { money: "守成為上", love: "切莫焦急", work: "穩紮穩打", health: "多加休養" }
+                poem: "走馬看花花不久\n凡事求穩不求快\n莫聽小人言語誘\n守得雲開見月明",
+                explain: { money: "守稱為上", love: "切莫焦急", work: "穩紮穩打", health: "多加休養" }
             }
         ];
 
@@ -148,6 +159,7 @@
                 document.getElementById('fortune-pot').classList.remove('shaking');
                 selectedStick = fortuneData[Math.floor(Math.random() * fortuneData.length)];
                 document.getElementById('toss-area').style.display = 'block';
+                window.scrollTo({ top: document.body.scrollHeight, behavior: 'smooth' });
             }, 1200);
         }
 
@@ -159,11 +171,15 @@
             vibrate([50, 30, 50]);
 
             setTimeout(() => {
-                if (Math.random() < 0.5) { // 聖筊
+                if (Math.random() < 0.5) { // 50% 聖筊機率
                     icon.innerText = "🙏";
                     text.innerText = "聖筊：神明應允";
                     text.style.color = "#28a745";
                     vibrate(200);
+                    
+                    // --- 2. 觸發灑花慶祝 (Confetti) ---
+                    triggerConfetti();
+
                     setTimeout(() => {
                         overlay.classList.remove('active');
                         showFinalResult();
@@ -177,13 +193,41 @@
             }, 1000);
         }
 
+        // 定義灑花效果的函數
+        function triggerConfetti() {
+            // 使用 canvas-confetti 庫的預設效果
+            confetti({
+                particleCount: 150, // 紙屑數量
+                spread: 70,        // 噴灑角度
+                origin: { y: 0.6 }, // 噴灑起點 (螢幕下方一點)
+                colors: ['#b32d2e', '#ffd700', '#ffffff', '#007aff'] // 宮廟與 Apple 的混合色
+            });
+            
+            // 可選：增加第二次噴灑，更有層次感
+            setTimeout(() => {
+                confetti({
+                    particleCount: 50,
+                    angle: 60,
+                    spread: 55,
+                    origin: { x: 0 },
+                    colors: ['#b32d2e', '#ffd700']
+                });
+                confetti({
+                    particleCount: 50,
+                    angle: 120,
+                    spread: 55,
+                    origin: { x: 1 },
+                    colors: ['#b32d2e', '#ffd700']
+                });
+            }, 200);
+        }
+
         function showFinalResult() {
             document.getElementById('toss-area').style.display = 'none';
             document.getElementById('r-name').innerText = selectedStick.name;
             document.getElementById('r-luck').innerText = selectedStick.luck;
             document.getElementById('r-poem').innerText = selectedStick.poem;
             
-            // 填充解籤內容
             document.getElementById('a-money').innerText = selectedStick.explain.money;
             document.getElementById('a-love').innerText = selectedStick.explain.love;
             document.getElementById('a-work').innerText = selectedStick.explain.work;
