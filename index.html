@@ -6,7 +6,7 @@
     <title>靈籤 · 智慧求籤</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link href="https://fonts.googleapis.com/css2?family=Noto+Serif+TC:wght@400;500;700;900&amp;family=Noto+Sans+TC:wght@300;400;500;700&amp;display=swap" rel="stylesheet">
-    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.9.3/dist/confetti.browser.min.js"></script>
     <!-- 避免深色模式閃白：在 head 內同步讀取並套用主題 -->
     <script>
         (function(){
@@ -644,9 +644,124 @@
             body { padding: 24px 20px 32px; }
             .hero-title { font-size: 2.5em; }
         }
+
+        /* ══════════════════════════════════
+           特效 CSS
+        ══════════════════════════════════ */
+
+        /* 全域粒子 canvas */
+        #fx-canvas {
+            position: fixed; inset: 0;
+            pointer-events: none; z-index: 500;
+            width: 100%; height: 100%;
+        }
+
+        /* 搖晃波紋 */
+        @keyframes ripple {
+            0%   { transform: translate(-50%,-50%) scale(0); opacity: 0.7; }
+            100% { transform: translate(-50%,-50%) scale(4); opacity: 0; }
+        }
+        .ripple-ring {
+            position: fixed; border-radius: 50%;
+            border: 2px solid rgba(192,57,43,0.6);
+            width: 80px; height: 80px;
+            pointer-events: none; z-index: 490;
+            animation: ripple 0.8s ease-out forwards;
+        }
+
+        /* 籤筒搖晃時的火花粒子 */
+        @keyframes sparkFly {
+            0%   { transform: translate(0,0) scale(1); opacity: 1; }
+            100% { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; }
+        }
+        .spark {
+            position: absolute; border-radius: 50%;
+            width: 6px; height: 6px;
+            pointer-events: none;
+            animation: sparkFly 0.6s ease-out forwards;
+        }
+
+        /* 聖筊金光爆炸 */
+        @keyframes holyBurst {
+            0%   { transform: scale(0) rotate(0deg); opacity: 1; }
+            60%  { opacity: 1; }
+            100% { transform: scale(2.5) rotate(180deg); opacity: 0; }
+        }
+        .holy-ring {
+            position: fixed; top: 50%; left: 50%;
+            transform: translate(-50%,-50%);
+            border-radius: 50%; pointer-events: none; z-index: 600;
+            border: 3px solid rgba(255,215,0,0.8);
+            animation: holyBurst 1s cubic-bezier(0.2,0,0.4,1) forwards;
+        }
+
+        /* 光芒射線 */
+        @keyframes rayShoot {
+            0%   { transform: rotate(var(--angle)) scaleX(0); opacity: 1; }
+            60%  { opacity: 0.8; }
+            100% { transform: rotate(var(--angle)) scaleX(1); opacity: 0; }
+        }
+        .holy-ray {
+            position: fixed; top: 50%; left: 50%;
+            width: 200px; height: 2px;
+            transform-origin: 0% 50%;
+            background: linear-gradient(90deg, rgba(255,215,0,0.9), transparent);
+            pointer-events: none; z-index: 599;
+            animation: rayShoot 0.8s ease-out forwards;
+        }
+
+        /* 笑筊震動閃紅 */
+        @keyframes failFlash {
+            0%,100% { background: var(--overlay-bg); }
+            20%     { background: rgba(192,57,43,0.25); }
+            40%     { background: var(--overlay-bg); }
+            60%     { background: rgba(192,57,43,0.18); }
+        }
+        #glass-overlay.fail-flash {
+            animation: failFlash 0.6s ease forwards;
+        }
+
+        /* 結果揭示的光芒背景 */
+        @keyframes resultGlow {
+            0%   { opacity: 0; transform: scale(0.8); }
+            50%  { opacity: 1; }
+            100% { opacity: 0; transform: scale(1.5); }
+        }
+        .result-burst {
+            position: fixed; top: 50%; left: 50%;
+            width: 300px; height: 300px;
+            margin: -150px 0 0 -150px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(255,215,0,0.3) 0%, transparent 70%);
+            pointer-events: none; z-index: 490;
+            animation: resultGlow 1.2s ease-out forwards;
+        }
+
+        /* 音效靜音按鈕 */
+        .sound-toggle {
+            position: fixed; bottom: 24px; right: 16px;
+            width: 44px; height: 44px; border-radius: 50%;
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            box-shadow: var(--shadow-md);
+            backdrop-filter: blur(12px);
+            -webkit-backdrop-filter: blur(12px);
+            cursor: pointer; z-index: 200;
+            display: flex; align-items: center; justify-content: center;
+            font-size: 18px;
+            transition: transform 0.2s, box-shadow 0.2s;
+            -webkit-tap-highlight-color: transparent;
+        }
+        .sound-toggle:active { transform: scale(0.9); }
+        .sound-toggle.muted { opacity: 0.5; }
     </style>
 </head>
 <body>
+
+<!-- 特效 Canvas -->
+<canvas id="fx-canvas"></canvas>
+<!-- 音效靜音切換 -->
+<button class="sound-toggle" id="soundToggle" aria-label="音效開關">🔔</button>
 
 <!-- 頂部導航 -->
 <nav class="nav-bar">
@@ -988,9 +1103,17 @@
         if (shakingTarget && shakingTarget.classList.contains('shaking')) return;
 
         vibrate(350);
+        playSoundShake();
         shakingTarget.classList.add('shaking');
         activePot.onclick = null; // 搖晃中禁止再點
         document.getElementById('potLabel').textContent = '籤詩正在顯靈...';
+
+        // 火花 + 波紋特效
+        const _sr = shakingTarget.getBoundingClientRect();
+        spawnRipple(_sr.left + _sr.width/2, _sr.top + _sr.height*0.45);
+        setTimeout(() => spawnSparks(10), 100);
+        setTimeout(() => spawnSparks(14), 400);
+        setTimeout(() => spawnSparks(8),  800);
 
         setTimeout(() => {
             shakingTarget.classList.remove('shaking');
@@ -1020,6 +1143,7 @@
         sub.textContent  = '靜心祈求，稍候片刻';
         overlay.classList.add('active');
         vibrate([60, 30, 60]);
+        playSoundToss();
 
         // 擲筊動畫：強制 reflow 確保每次重播
         const cup1 = document.getElementById('cup1');
@@ -1040,6 +1164,8 @@
                 text.style.color = 'var(--accent-green)';
                 sub.textContent  = '神明應允，此籤有靈驗';
                 vibrate([100, 50, 100]);
+                playSoundHoly();
+                spawnHolyBurst();
                 triggerConfetti();
 
                 setTimeout(() => {
@@ -1055,6 +1181,9 @@
                 text.style.color = 'var(--accent-red)';
                 sub.textContent  = '神明微笑，此籤緣分未到\n請重新誠心祈求…';
                 vibrate([80, 40, 80]);
+                playSoundFail();
+                document.getElementById('glass-overlay').classList.add('fail-flash');
+                setTimeout(() => document.getElementById('glass-overlay').classList.remove('fail-flash'), 700);
 
                 if (cup1 && cup2) {
                     cup1.classList.remove('flip');
@@ -1070,14 +1199,204 @@
         }, 1100);
     }
 
-    /* ── 彩帶灑花 ── */
+    /* ══════════════════════════════════
+       音效系統 (Web Audio API)
+    ══════════════════════════════════ */
+    /* ── 停用 confetti Worker（避免 CSP blob: 警告）── */
+    if (typeof confetti !== 'undefined' && confetti.create) {
+        // 全域覆寫：強制 useWorker: false
+        const _origConfetti = confetti;
+        window.confetti = function(opts) {
+            return _origConfetti(Object.assign({ useWorker: false }, opts || {}));
+        };
+        Object.assign(window.confetti, _origConfetti);
+    }
+
+    let audioCtx = null;
+    let soundOn = true;
+
+    function getCtx() {
+        if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+        return audioCtx;
+    }
+
+    function playTone(freq, type, duration, volume = 0.3, delay = 0) {
+        if (!soundOn) return;
+        try {
+            const ctx = getCtx();
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain); gain.connect(ctx.destination);
+            osc.type = type; osc.frequency.value = freq;
+            const t = ctx.currentTime + delay;
+            gain.gain.setValueAtTime(0, t);
+            gain.gain.linearRampToValueAtTime(volume, t + 0.02);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+            osc.start(t); osc.stop(t + duration + 0.05);
+        } catch(e) {}
+    }
+
+    function playNoise(duration, volume = 0.15, delay = 0) {
+        if (!soundOn) return;
+        try {
+            const ctx = getCtx();
+            const buf = ctx.createBuffer(1, ctx.sampleRate * duration, ctx.sampleRate);
+            const data = buf.getChannelData(0);
+            for (let i = 0; i < data.length; i++) data[i] = Math.random() * 2 - 1;
+            const src = ctx.createBufferSource();
+            src.buffer = buf;
+            const gain = ctx.createGain();
+            const filter = ctx.createBiquadFilter();
+            filter.type = 'bandpass'; filter.frequency.value = 1200;
+            src.connect(filter); filter.connect(gain); gain.connect(ctx.destination);
+            const t = ctx.currentTime + delay;
+            gain.gain.setValueAtTime(volume, t);
+            gain.gain.exponentialRampToValueAtTime(0.001, t + duration);
+            src.start(t); src.stop(t + duration + 0.05);
+        } catch(e) {}
+    }
+
+    // 搖籤聲：竹籤碰撞噪音 + 輕叩聲
+    function playSoundShake() {
+        for (let i = 0; i < 6; i++) {
+            playNoise(0.08, 0.18 + Math.random() * 0.1, i * 0.18);
+            playTone(300 + Math.random() * 200, 'triangle', 0.06, 0.08, i * 0.18 + 0.02);
+        }
+    }
+
+    // 籤飛出聲：上升音調
+    function playSoundStickPop() {
+        playTone(440, 'sine', 0.15, 0.2);
+        playTone(660, 'sine', 0.12, 0.15, 0.08);
+        playTone(880, 'sine', 0.10, 0.12, 0.16);
+        playNoise(0.12, 0.06, 0.05);
+    }
+
+    // 擲筊聲：木塊撞擊
+    function playSoundToss() {
+        playNoise(0.12, 0.3, 0);
+        playTone(180, 'triangle', 0.18, 0.25, 0.02);
+        playNoise(0.10, 0.25, 0.18);
+        playTone(160, 'triangle', 0.15, 0.2, 0.20);
+    }
+
+    // 聖筊聲：莊嚴和弦
+    function playSoundHoly() {
+        const freqs = [261, 329, 392, 523]; // C E G C
+        freqs.forEach((f, i) => {
+            playTone(f, 'sine', 1.2, 0.18, i * 0.06);
+            playTone(f * 2, 'sine', 0.8, 0.06, i * 0.06 + 0.1);
+        });
+        playTone(1046, 'sine', 0.6, 0.12, 0.3);
+        playTone(784, 'triangle', 0.5, 0.5, 0.5);
+    }
+
+    // 笑筊聲：下降音調
+    function playSoundFail() {
+        playTone(400, 'sawtooth', 0.3, 0.15);
+        playTone(280, 'sawtooth', 0.3, 0.15, 0.15);
+        playTone(200, 'sawtooth', 0.4, 0.15, 0.3);
+        playNoise(0.2, 0.1, 0.1);
+    }
+
+    // 結果揭示：鈴聲序列
+    function playSoundReveal() {
+        const melody = [523, 659, 784, 1046, 784, 659, 523];
+        melody.forEach((f, i) => playTone(f, 'sine', 0.18, 0.14, i * 0.12));
+        playTone(1046, 'sine', 0.6, 0.2, melody.length * 0.12);
+    }
+
+    // 音效開關
+    document.getElementById('soundToggle').addEventListener('click', () => {
+        soundOn = !soundOn;
+        const btn = document.getElementById('soundToggle');
+        btn.textContent = soundOn ? '🔔' : '🔕';
+        btn.classList.toggle('muted', !soundOn);
+    });
+
+    /* ══════════════════════════════════
+       視覺特效系統
+    ══════════════════════════════════ */
+
+    // 火花粒子（搖籤時從籤筒噴出）
+    function spawnSparks(count = 12) {
+        const stage = document.getElementById('potStage');
+        if (!stage) return;
+        const rect = stage.getBoundingClientRect();
+        const cx = rect.left + rect.width / 2;
+        const cy = rect.top + rect.height * 0.45;
+
+        for (let i = 0; i < count; i++) {
+            const el = document.createElement('div');
+            el.className = 'spark';
+            const angle = (Math.random() * 280 - 140) * Math.PI / 180;
+            const dist = 40 + Math.random() * 70;
+            const dx = Math.cos(angle) * dist;
+            const dy = Math.sin(angle) * dist - 30;
+            const colors = ['#ffd700','#ff6b35','#fff3a0','#ffaa00','#ff4444'];
+            el.style.cssText = `
+                left:${cx - 3}px; top:${cy - 3}px;
+                background:${colors[Math.floor(Math.random()*colors.length)]};
+                --dx:${dx}px; --dy:${dy}px;
+                width:${4+Math.random()*5}px; height:${4+Math.random()*5}px;
+                animation-duration:${0.4+Math.random()*0.4}s;
+                animation-delay:${Math.random()*0.1}s;
+            `;
+            document.body.appendChild(el);
+            setTimeout(() => el.remove(), 900);
+        }
+    }
+
+    // 波紋（點擊/搖晃回饋）
+    function spawnRipple(x, y) {
+        const el = document.createElement('div');
+        el.className = 'ripple-ring';
+        el.style.cssText = `left:${x}px; top:${y}px;`;
+        document.body.appendChild(el);
+        setTimeout(() => el.remove(), 900);
+    }
+
+    // 聖筊光芒爆炸
+    function spawnHolyBurst() {
+        const burst = document.createElement('div');
+        burst.className = 'result-burst';
+        document.body.appendChild(burst);
+        setTimeout(() => burst.remove(), 1300);
+
+        for (let i = 0; i < 8; i++) {
+            const ray = document.createElement('div');
+            ray.className = 'holy-ray';
+            ray.style.setProperty('--angle', `${i * 45}deg`);
+            ray.style.animationDelay = `${i * 0.04}s`;
+            document.body.appendChild(ray);
+            setTimeout(() => ray.remove(), 1000);
+        }
+
+        [120, 180, 250].forEach((size, idx) => {
+            const ring = document.createElement('div');
+            ring.className = 'holy-ring';
+            ring.style.cssText = `width:${size}px;height:${size}px;margin:${-size/2}px 0 0 ${-size/2}px;animation-delay:${idx*0.1}s;`;
+            document.body.appendChild(ring);
+            setTimeout(() => ring.remove(), 1200);
+        });
+    }
+
+    // 強化彩帶
     function triggerConfetti() {
-        confetti({ particleCount: 140, spread: 80, origin: { y: 0.55 }, colors: ['#c0392b','#ffd700','#ffffff','#0a84ff','#30d158'] });
+        confetti({ particleCount: 160, spread: 90, origin: { y: 0.5 },
+            colors: ['#c0392b','#ffd700','#ffffff','#0a84ff','#30d158','#ff9500'] });
         setTimeout(() => {
-            confetti({ particleCount: 60, angle: 55, spread: 60, origin: { x: 0 }, colors: ['#c0392b','#ffd700'] });
-            confetti({ particleCount: 60, angle: 125, spread: 60, origin: { x: 1 }, colors: ['#c0392b','#ffd700'] });
-        }, 250);
-        setTimeout(() => confetti({ particleCount: 40, spread: 50, origin: { y: 0.3 }, colors: ['#ffffff','#ffd700','#c0392b'] }), 500);
+            confetti({ particleCount: 80, angle: 55, spread: 65, origin: { x: 0 },
+                colors: ['#c0392b','#ffd700','#ff9500'] });
+            confetti({ particleCount: 80, angle: 125, spread: 65, origin: { x: 1 },
+                colors: ['#c0392b','#ffd700','#ffffff'] });
+        }, 220);
+        setTimeout(() => {
+            confetti({ particleCount: 60, spread: 55, origin: { y: 0.25 },
+                colors: ['#ffffff','#ffd700','#c0392b'] });
+            confetti({ particleCount: 40, spread: 40, origin: { y: 0.7, x: 0.5 },
+                colors: ['#0a84ff','#30d158','#ffd700'] });
+        }, 480);
     }
 
     /* ── 顯示結果 ── */
@@ -1095,6 +1414,13 @@
 
         document.getElementById('result-box').style.display = 'block';
         requestAnimationFrame(() => document.getElementById('result-box').classList.add('visible'));
+        playSoundReveal();
+        setTimeout(() => {
+            const burst = document.createElement('div');
+            burst.className = 'result-burst';
+            document.body.appendChild(burst);
+            setTimeout(() => burst.remove(), 1300);
+        }, 200);
 
         // 打字機效果
         const aiEl = document.getElementById('ai-text');
