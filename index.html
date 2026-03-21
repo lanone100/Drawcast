@@ -1203,14 +1203,17 @@
        音效系統 (Web Audio API)
     ══════════════════════════════════ */
     /* ── 停用 confetti Worker（避免 CSP blob: 警告）── */
-    if (typeof confetti !== 'undefined' && confetti.create) {
-        // 全域覆寫：強制 useWorker: false
-        const _origConfetti = confetti;
+    // confetti 已在 head 內載入，直接在此包裝
+    (function() {
+        const _orig = window.confetti;
+        if (!_orig) return;
         window.confetti = function(opts) {
-            return _origConfetti(Object.assign({ useWorker: false }, opts || {}));
+            return _orig(Object.assign({}, opts || {}, { useWorker: false, disableForReducedMotion: false }));
         };
-        Object.assign(window.confetti, _origConfetti);
-    }
+        // 保留靜態方法
+        if (_orig.create) window.confetti.create = _orig.create;
+        if (_orig.reset)  window.confetti.reset  = _orig.reset;
+    })();
 
     let audioCtx = null;
     let soundOn = true;
